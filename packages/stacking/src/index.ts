@@ -19,6 +19,7 @@ import {
   ResponseErrorCV,
   SomeCV,
   TupleCV,
+  noneCV,
 } from '@stacks/transactions';
 import { StacksNetwork } from '@stacks/network';
 import BN from 'bn.js';
@@ -115,8 +116,8 @@ export interface LockStxOptions {
 export interface DelegateStxOptions {
   amountMicroStx: BN;
   delegateTo: string;
-  untilBurnBlockHeight: number;
-  poxAddress: string;
+  untilBurnBlockHeight?: number;
+  poxAddress?: string;
   privateKey: string;
 }
 
@@ -398,16 +399,21 @@ export class StackingClient {
     contract: string;
     amountMicroStx: BN;
     delegateTo: string;
-    untilBurnBlockHeight: number;
-    poxAddress: string;
+    untilBurnBlockHeight?: number;
+    poxAddress?: string;
   }) {
-    const { hashMode, data } = decodeBtcAddress(poxAddress);
-    const hashModeBuffer = bufferCV(new BN(hashMode, 10).toBuffer());
-    const hashbytes = bufferCV(data);
-    const address = tupleCV({
-      hashbytes,
-      version: hashModeBuffer,
-    });
+    let address = undefined;
+
+    if (poxAddress) {
+      const { hashMode, data } = decodeBtcAddress(poxAddress);
+      const hashModeBuffer = bufferCV(new BN(hashMode, 10).toBuffer());
+      const hashbytes = bufferCV(data);
+      address = tupleCV({
+        hashbytes,
+        version: hashModeBuffer,
+      });
+    }
+
     const [contractAddress, contractName] = contract.split('.');
     const network = this.network;
     const txOptions: ContractCallOptions = {
@@ -417,8 +423,8 @@ export class StackingClient {
       functionArgs: [
         uintCV(amountMicroStx.toString(10)),
         standardPrincipalCV(delegateTo),
-        uintCV(untilBurnBlockHeight),
-        address,
+        untilBurnBlockHeight ? uintCV(untilBurnBlockHeight) : noneCV(),
+        address ? address : noneCV(),
       ],
       validateWithAbi: true,
       network,

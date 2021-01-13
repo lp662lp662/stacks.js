@@ -8,7 +8,8 @@ import {
   tupleCV,
   standardPrincipalCV,
   someCV,
-  AddressHashMode
+  AddressHashMode,
+  noneCV,
 } from '@stacks/transactions';
 import { address as btcAddress } from 'bitcoinjs-lib';
 import { getAddressHashMode } from '../src/utils';
@@ -287,6 +288,72 @@ test('delegate stx', async () => {
       standardPrincipalCV(delegateTo),
       uintCV(untilBurnBlockHeight),
       poxAddressCV,
+    ],
+    validateWithAbi: true,
+    network,
+    senderKey: privateKey
+  };
+
+  expect(fetchMock.mock.calls[0][0]).toEqual(network.getPoxInfoUrl());
+  expect(makeContractCall).toHaveBeenCalledTimes(1);
+  expect(makeContractCall).toHaveBeenCalledWith(expectedContractCallOptions);
+  expect(broadcastTransaction).toHaveBeenCalledTimes(1);
+  expect(broadcastTransaction).toHaveBeenCalledWith(transaction, network);
+  expect(delegateResults).toEqual(broadcastResponse);
+})
+
+test('delegate stx with empty optional parameters', async () => {
+  const address = 'ST3XKKN4RPV69NN1PHFDNX3TYKXT7XPC4N8KC1ARH';
+  const delegateTo = 'ST2MCYPWTFMD2MGR5YY695EJG0G1R4J2BTJPRGM7H';
+  const network = new StacksTestnet();
+  const amountMicroStx = new BN(100000000000);
+  const privateKey = 'd48f215481c16cbe6426f8e557df9b78895661971d71735126545abddcd5377001';
+
+  const transaction = { serialize: () => 'mocktxhex' }
+  const makeContractCall = jest.fn().mockResolvedValue(transaction);
+  const broadcastResponse = JSON.stringify({ txid: 'mocktxid' });
+  const broadcastTransaction = jest.fn().mockResolvedValue(broadcastResponse);
+
+  jest.mock('@stacks/transactions', () => ({
+    makeContractCall,
+    broadcastTransaction,
+    bufferCV: jest.requireActual('@stacks/transactions').bufferCV,
+    tupleCV: jest.requireActual('@stacks/transactions').tupleCV,
+    uintCV: jest.requireActual('@stacks/transactions').uintCV,
+    AddressHashMode: jest.requireActual('@stacks/transactions').AddressHashMode,
+    standardPrincipalCV: jest.requireActual('@stacks/transactions').standardPrincipalCV,
+    noneCV: jest.requireActual('@stacks/transactions').noneCV,
+  }));
+
+  fetchMock.mockResponse(() => {
+    return Promise.resolve({
+      body: JSON.stringify(poxInfo),
+      status: 200
+    })
+  })
+
+  const { StackingClient } = require('../src');
+  const client = new StackingClient(address, network);
+
+  const delegateResults = await client.delegateStx({
+    amountMicroStx,
+    delegateTo,
+    untilBurnBlockHeight: undefined,
+    poxAddress: undefined,
+    privateKey,
+  });
+
+  const noValue = noneCV();
+
+  const expectedContractCallOptions = {
+    contractAddress: poxInfo.contract_id.split('.')[0],
+    contractName: poxInfo.contract_id.split('.')[1],
+    functionName: 'delegate-stx',
+    functionArgs: [
+      uintCV(amountMicroStx.toString(10)),
+      standardPrincipalCV(delegateTo),
+      noValue,
+      noValue,
     ],
     validateWithAbi: true,
     network,
