@@ -20,6 +20,8 @@ import {
   SomeCV,
   TupleCV,
   noneCV,
+  getNonce,
+  getAddressFromPrivateKey,
 } from '@stacks/transactions';
 import { StacksNetwork } from '@stacks/network';
 import BN from 'bn.js';
@@ -107,10 +109,10 @@ export interface LockStxOptions {
 /**
  * Delegate stx options
  *
- * @param  {BigNum} amountMicroStx - number of microstacks to lock
- * @param  {String} delegateTo - the STX address of the delegator
+ * @param  {BigNum} amountMicroStx - number of microstacks to delegate
+ * @param  {String} delegateTo - the STX address of the delegatee
  * @param  {number} untilBurnBlockHeight - the burnchain block height after which delegation is revoked
- * @param  {String} poxAddress - the reward Bitcoin address
+ * @param  {String} poxAddress - the reward Bitcoin address of the delegator
  * @param  {String} privateKey - private key to sign transaction
  */
 export interface DelegateStxOptions {
@@ -121,8 +123,27 @@ export interface DelegateStxOptions {
   privateKey: string;
 }
 
+/**
+ * Delegate stack stx options
+ *
+ * @param  {Array<String>} stackers - the STX addresses of all delegators
+ * @param  {BigNum} amountMicroStx - number of microstacks to lock
+ * @param  {String} poxAddress - the reward Bitcoin address of the delegatee
+ * @param  {number} startBurnBlockHeight - the burnchain block height to begin lock
+ * @param  {number} cycles - number of cycles to lock
+ * @param  {String} privateKey - private key to sign transaction
+ */
+export interface DelegateStackStxOptions {
+  stackers: string[];
+  amountMicroStx: BN;
+  poxAddress: string;
+  startBurnBlockHeight: number;
+  cycles: number;
+  privateKey: string;
+}
+
 export class StackingClient {
-  constructor(public address: string, public network: StacksNetwork) { }
+  constructor(public address: string, public network: StacksNetwork) {}
 
   /**
    * Get stacks node info
@@ -321,13 +342,19 @@ export class StackingClient {
   }
 
   /**
- * Generate and broadcast a transaction to create a delegation relationship
- *
- * @param {DelegateStxOptions} options - a required delegate STX options object
- *
- * @returns {Promise<string>} that resolves to a broadcasted txid if the operation succeeds
- */
-  async delegateStx({ amountMicroStx, delegateTo, untilBurnBlockHeight, poxAddress, privateKey }: DelegateStxOptions) {
+   * As a delegator, generate and broadcast a transaction to create a delegation relationship
+   *
+   * @param {DelegateStxOptions} options - a required delegate STX options object
+   *
+   * @returns {Promise<string>} that resolves to a broadcasted txid if the operation succeeds
+   */
+  async delegateStx({
+    amountMicroStx,
+    delegateTo,
+    untilBurnBlockHeight,
+    poxAddress,
+    privateKey,
+  }: DelegateStxOptions) {
     const poxInfo = await this.getPoxInfo();
     const contract = poxInfo.contract_id;
 
@@ -348,6 +375,53 @@ export class StackingClient {
       return res;
     }
     throw new Error(`${res.error} - ${res.reason}`);
+  }
+
+  /**
+   * As a delegatee, generate and broadcast a transaction to stack delegator tokens. This will lock up tokens owned by the delegator irreverably.
+   *
+   * @param {DelegateStackStxOptions} options - a required delegate stack STX options object
+   *
+   * @returns {Array<string>} that resolves to a broadcasted txid if the operation succeeds
+   */
+  async delegateStackStx({
+    stackers,
+    amountMicroStx,
+    poxAddress,
+    startBurnBlockHeight,
+    cycles,
+    privateKey,
+  }: DelegateStackStxOptions) {
+    const poxInfo = await this.getPoxInfo();
+    let senderNonce: BN = await getNonce(getAddressFromPrivateKey(privateKey));
+    const contract = poxInfo.contract_id;
+    let responses: Array<string> = [];
+
+    for (let stacker of stackers) {
+      const txOptions = this.getDelegateStackOptions({
+        contract,
+        stacker,
+        amountMicroStx,
+        poxAddress,
+        startBurnBlockHeight,
+        cycles,
+      });
+      const tx = await makeContractCall({
+        ...txOptions,
+        senderKey: privateKey,
+        nonce: senderNonce,
+      });
+
+      const res = await broadcastTransaction(tx, txOptions.network as StacksNetwork);
+      if (typeof res === 'string') {
+        responses.push(res);
+        senderNonce.add(new BN(1));
+      } else {
+        responses.push(`${stacker}: ${res.error} - ${res.reason}`);
+      }
+    }
+
+    return responses;
   }
 
   getStackOptions({
@@ -425,6 +499,48 @@ export class StackingClient {
         standardPrincipalCV(delegateTo),
         untilBurnBlockHeight ? uintCV(untilBurnBlockHeight) : noneCV(),
         address ? address : noneCV(),
+      ],
+      validateWithAbi: true,
+      network,
+    };
+    return txOptions;
+  }
+
+  getDelegateStackOptions({
+    contract,
+    stacker,
+    amountMicroStx,
+    poxAddress,
+    startBurnBlockHeight,
+    cycles,
+  }: {
+    contract: string;
+    stacker: string;
+    amountMicroStx: BN;
+    poxAddress: string;
+    startBurnBlockHeight: number;
+    cycles: number;
+  }) {
+    const { hashMode, data } = decodeBtcAddress(poxAddress);
+    const hashModeBuffer = bufferCV(new BN(hashMode, 10).toBuffer());
+    const hashbytes = bufferCV(data);
+    const address = tupleCV({
+      hashbytes,
+      version: hashModeBuffer,
+    });
+
+    const [contractAddress, contractName] = contract.split('.');
+    const network = this.network;
+    const txOptions: ContractCallOptions = {
+      contractAddress,
+      contractName,
+      functionName: 'delegate-stack-stx',
+      functionArgs: [
+        standardPrincipalCV(stacker),
+        uintCV(amountMicroStx.toString(10)),
+        address,
+        uintCV(startBurnBlockHeight),
+        uintCV(cycles),
       ],
       validateWithAbi: true,
       network,

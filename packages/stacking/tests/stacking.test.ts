@@ -368,6 +368,185 @@ test('delegate stx with empty optional parameters', async () => {
   expect(delegateResults).toEqual(broadcastResponse);
 })
 
+test('delegate stack stx with one delegator', async () => {
+  const stacker = 'ST3XKKN4RPV69NN1PHFDNX3TYKXT7XPC4N8KC1ARH';
+  const address = 'ST2MCYPWTFMD2MGR5YY695EJG0G1R4J2BTJPRGM7H';
+  const poxAddress = '1Xik14zRm29UsyS6DjhYg4iZeZqsDa8D3';
+  const network = new StacksTestnet();
+  const amountMicroStx = new BN(100000000000);
+  const startBurnBlockHeight = 2000;
+  const cycles = 10;
+  const privateKey = 'd48f215481c16cbe6426f8e557df9b78895661971d71735126545abddcd5377001';
+
+  const transaction = { serialize: () => 'mocktxhex' }
+  const makeContractCall = jest.fn().mockResolvedValue(transaction);
+  const broadcastResponse = JSON.stringify({ txid: 'mocktxid' });
+  const broadcastTransaction = jest.fn().mockResolvedValue(broadcastResponse);
+
+  jest.mock('@stacks/transactions', () => ({
+    makeContractCall,
+    broadcastTransaction,
+    bufferCV: jest.requireActual('@stacks/transactions').bufferCV,
+    tupleCV: jest.requireActual('@stacks/transactions').tupleCV,
+    uintCV: jest.requireActual('@stacks/transactions').uintCV,
+    getNonce: jest.requireActual('@stacks/transactions').getNonce,
+    AddressHashMode: jest.requireActual('@stacks/transactions').AddressHashMode,
+    standardPrincipalCV: jest.requireActual('@stacks/transactions').standardPrincipalCV,
+    getAddressFromPrivateKey: jest.requireActual('@stacks/transactions').getAddressFromPrivateKey,
+  }));
+
+  fetchMock.mockResponse(request => {
+    const url = request.url;
+    if (url.endsWith('pox')) {
+      return Promise.resolve({
+        body: JSON.stringify(poxInfo),
+        status: 200
+      })
+    } else {
+      return Promise.resolve({
+        body: JSON.stringify(balanceInfo),
+        status: 200
+      })
+    }
+  })
+
+  const { StackingClient } = require('../src');
+  const client = new StackingClient(address, network);
+
+  const delegateResults = await client.delegateStackStx({
+    stackers: [stacker],
+    amountMicroStx,
+    poxAddress,
+    startBurnBlockHeight,
+    cycles,
+    privateKey,
+  });
+
+  const { version, hash } = btcAddress.fromBase58Check(poxAddress);
+  const versionBuffer = bufferCV(new BN(version, 10).toBuffer());
+  const hashbytes = bufferCV(hash);
+  const poxAddressCV = tupleCV({
+    hashbytes,
+    version: versionBuffer,
+  });
+
+  const expectedContractCallOptions = {
+    contractAddress: poxInfo.contract_id.split('.')[0],
+    contractName: poxInfo.contract_id.split('.')[1],
+    functionName: 'delegate-stack-stx',
+    functionArgs: [
+      standardPrincipalCV(stacker),
+      uintCV(amountMicroStx.toString(10)),
+      poxAddressCV,
+      uintCV(startBurnBlockHeight),
+      uintCV(cycles),
+    ],
+    validateWithAbi: true,
+    network,
+    senderKey: privateKey,
+    nonce: new BN(0)
+  };
+
+  expect(fetchMock.mock.calls[0][0]).toEqual(network.getPoxInfoUrl());
+  expect(makeContractCall).toHaveBeenCalledTimes(1);
+  expect(makeContractCall).toHaveBeenCalledWith(expectedContractCallOptions);
+  expect(broadcastTransaction).toHaveBeenCalledTimes(1);
+  expect(broadcastTransaction).toHaveBeenCalledWith(transaction, network);
+  expect(delegateResults).toEqual([broadcastResponse]);
+})
+
+
+test('delegate stack stx with three delegators', async () => {
+  const stackers = ['ST3XKKN4RPV69NN1PHFDNX3TYKXT7XPC4N8KC1ARH', 'STQRZG94Y58N1KR6S1EJ4FTHSYCMHE2WYD5A41FV', 'ST2G1V8CJ46SCPG41ER83DYE04M352CHKD8H8328F'];
+  const address = 'ST2MCYPWTFMD2MGR5YY695EJG0G1R4J2BTJPRGM7H';
+  const poxAddress = '1Xik14zRm29UsyS6DjhYg4iZeZqsDa8D3';
+  const network = new StacksTestnet();
+  const amountMicroStx = new BN(100000000000);
+  const startBurnBlockHeight = 2000;
+  const cycles = 10;
+  const privateKey = 'd48f215481c16cbe6426f8e557df9b78895661971d71735126545abddcd5377001';
+
+  const transaction = { serialize: () => 'mocktxhex' }
+  const makeContractCall = jest.fn().mockResolvedValue(transaction);
+  const broadcastResponse = JSON.stringify({ txid: 'mocktxid' });
+  const broadcastTransaction = jest.fn().mockResolvedValue(broadcastResponse);
+
+  jest.mock('@stacks/transactions', () => ({
+    makeContractCall,
+    broadcastTransaction,
+    bufferCV: jest.requireActual('@stacks/transactions').bufferCV,
+    tupleCV: jest.requireActual('@stacks/transactions').tupleCV,
+    uintCV: jest.requireActual('@stacks/transactions').uintCV,
+    getNonce: jest.requireActual('@stacks/transactions').getNonce,
+    AddressHashMode: jest.requireActual('@stacks/transactions').AddressHashMode,
+    standardPrincipalCV: jest.requireActual('@stacks/transactions').standardPrincipalCV,
+    getAddressFromPrivateKey: jest.requireActual('@stacks/transactions').getAddressFromPrivateKey,
+  }));
+
+  fetchMock.mockResponse(request => {
+    const url = request.url;
+    if (url.endsWith('pox')) {
+      return Promise.resolve({
+        body: JSON.stringify(poxInfo),
+        status: 200
+      })
+    } else {
+      return Promise.resolve({
+        body: JSON.stringify(balanceInfo),
+        status: 200
+      })
+    }
+  })
+
+  const { StackingClient } = require('../src');
+  const client = new StackingClient(address, network);
+
+  const delegateResults = await client.delegateStackStx({
+    stackers,
+    amountMicroStx,
+    poxAddress,
+    startBurnBlockHeight,
+    cycles,
+    privateKey,
+  });
+
+  const { version, hash } = btcAddress.fromBase58Check(poxAddress);
+  const versionBuffer = bufferCV(new BN(version, 10).toBuffer());
+  const hashbytes = bufferCV(hash);
+  const poxAddressCV = tupleCV({
+    hashbytes,
+    version: versionBuffer,
+  });
+
+  function getContractCallOption(i: number) {
+    return {
+      contractAddress: poxInfo.contract_id.split('.')[0],
+      contractName: poxInfo.contract_id.split('.')[1],
+      functionName: 'delegate-stack-stx',
+      functionArgs: [
+        standardPrincipalCV(stackers[i]),
+        uintCV(amountMicroStx.toString(10)),
+        poxAddressCV,
+        uintCV(startBurnBlockHeight),
+        uintCV(cycles),
+      ],
+      validateWithAbi: true,
+      network,
+      senderKey: privateKey,
+      nonce: new BN(0)
+    }
+  }
+
+  expect(fetchMock.mock.calls[0][0]).toEqual(network.getPoxInfoUrl());
+  expect(makeContractCall).toHaveBeenCalledTimes(3);
+  expect(makeContractCall).toHaveBeenCalledWith(getContractCallOption(0));
+  expect(makeContractCall).toHaveBeenCalledWith(getContractCallOption(1));
+  expect(makeContractCall).toHaveBeenCalledWith(getContractCallOption(2));
+  expect(broadcastTransaction).toHaveBeenCalledTimes(3);
+  expect(broadcastTransaction).toHaveBeenCalledWith(transaction, network);
+  expect(delegateResults).toEqual([broadcastResponse, broadcastResponse, broadcastResponse]);
+})
+
 test('get stacking status', async () => {
   const address = 'ST3XKKN4RPV69NN1PHFDNX3TYKXT7XPC4N8KC1ARH';
   const network = new StacksTestnet();
