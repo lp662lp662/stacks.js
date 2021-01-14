@@ -142,6 +142,12 @@ export interface DelegateStackStxOptions {
   privateKey: string;
 }
 
+export interface StackAggregationCommitOptions {
+  poxAddress: string;
+  rewardCycle: number;
+  privateKey: string;
+}
+
 export class StackingClient {
   constructor(public address: string, public network: StacksNetwork) {}
 
@@ -424,6 +430,38 @@ export class StackingClient {
     return responses;
   }
 
+  /**
+   * As a delegatee, generate and broadcast a transaction to commit partially committed delegator tokens
+   *
+   * @param {StackAggregationCommitOptions} options - a required stack aggregation commit options object
+   *
+   * @returns {Promise<string>} that resolves to a broadcasted txid if the operation succeeds
+   */
+  async stackAggregationCommit({
+    poxAddress,
+    rewardCycle,
+    privateKey,
+  }: StackAggregationCommitOptions) {
+    const poxInfo = await this.getPoxInfo();
+    const contract = poxInfo.contract_id;
+
+    const txOptions = this.getStackAggregationCommitOptions({
+      contract,
+      poxAddress,
+      rewardCycle,
+    });
+    const tx = await makeContractCall({
+      ...txOptions,
+      senderKey: privateKey,
+    });
+
+    const res = await broadcastTransaction(tx, txOptions.network as StacksNetwork);
+    if (typeof res === 'string') {
+      return res;
+    }
+    throw new Error(`${res.error} - ${res.reason}`);
+  }
+
   getStackOptions({
     amountMicroStx,
     poxAddress,
@@ -542,6 +580,36 @@ export class StackingClient {
         uintCV(startBurnBlockHeight),
         uintCV(cycles),
       ],
+      validateWithAbi: true,
+      network,
+    };
+    return txOptions;
+  }
+
+  getStackAggregationCommitOptions({
+    contract,
+    poxAddress,
+    rewardCycle,
+  }: {
+    contract: string;
+    poxAddress: string;
+    rewardCycle: number;
+  }) {
+    const { hashMode, data } = decodeBtcAddress(poxAddress);
+    const hashModeBuffer = bufferCV(new BN(hashMode, 10).toBuffer());
+    const hashbytes = bufferCV(data);
+    const address = tupleCV({
+      hashbytes,
+      version: hashModeBuffer,
+    });
+
+    const [contractAddress, contractName] = contract.split('.');
+    const network = this.network;
+    const txOptions: ContractCallOptions = {
+      contractAddress,
+      contractName,
+      functionName: 'stack-aggregation-commit',
+      functionArgs: [address, uintCV(rewardCycle)],
       validateWithAbi: true,
       network,
     };
