@@ -462,6 +462,31 @@ export class StackingClient {
     throw new Error(`${res.error} - ${res.reason}`);
   }
 
+  /**
+   * As a delegator, generate and broadcast a transaction to terminate the delegation relationship
+   *
+   * @param {string} privateKey - the private key to be used for the revoke call
+   *
+   * @returns {Promise<string>} that resolves to a broadcasted txid if the operation succeeds
+   */
+  async revokeDelegateStx(privateKey: string) {
+    const poxInfo = await this.getPoxInfo();
+    const contract = poxInfo.contract_id;
+
+    const txOptions = this.getRevokeDelegateStxOptions(contract);
+
+    const tx = await makeContractCall({
+      ...txOptions,
+      senderKey: privateKey,
+    });
+
+    const res = await broadcastTransaction(tx, txOptions.network as StacksNetwork);
+    if (typeof res === 'string') {
+      return res;
+    }
+    throw new Error(`${res.error} - ${res.reason}`);
+  }
+
   getStackOptions({
     amountMicroStx,
     poxAddress,
@@ -610,6 +635,20 @@ export class StackingClient {
       contractName,
       functionName: 'stack-aggregation-commit',
       functionArgs: [address, uintCV(rewardCycle)],
+      validateWithAbi: true,
+      network,
+    };
+    return txOptions;
+  }
+
+  getRevokeDelegateStxOptions(contract: string) {
+    const [contractAddress, contractName] = contract.split('.');
+    const network = this.network;
+    const txOptions: ContractCallOptions = {
+      contractAddress,
+      contractName,
+      functionName: 'revoke-delegate-stx',
+      functionArgs: [],
       validateWithAbi: true,
       network,
     };
