@@ -149,7 +149,7 @@ export interface StackAggregationCommitOptions {
 }
 
 export class StackingClient {
-  constructor(public address: string, public network: StacksNetwork) {}
+  constructor(public address: string, public network: StacksNetwork) { }
 
   /**
    * Get stacks node info
@@ -348,7 +348,7 @@ export class StackingClient {
   }
 
   /**
-   * As a delegator, generate and broadcast a transaction to create a delegation relationship
+   * As a delegatee, generate and broadcast a transaction to create a delegation relationship
    *
    * @param {DelegateStxOptions} options - a required delegate STX options object
    *
@@ -384,11 +384,11 @@ export class StackingClient {
   }
 
   /**
-   * As a delegatee, generate and broadcast a transaction to stack delegator tokens. This will lock up tokens owned by the delegator irreverably.
+   * As a delegator, generate and broadcast transactions to stack for multiple delegatees. This will lock up tokens owned by the delegatees.
    *
    * @param {DelegateStackStxOptions} options - a required delegate stack STX options object
    *
-   * @returns {Array<string>} that resolves to a broadcasted txid if the operation succeeds
+   * @returns {Array<string>} that includes reponses for all operations, either a txid or an error
    */
   async delegateStackStx({
     stackers,
@@ -431,7 +431,7 @@ export class StackingClient {
   }
 
   /**
-   * As a delegatee, generate and broadcast a transaction to commit partially committed delegator tokens
+   * As a delegator, generate and broadcast a transaction to commit partially committed delegatee tokens
    *
    * @param {StackAggregationCommitOptions} options - a required stack aggregation commit options object
    *
@@ -463,7 +463,7 @@ export class StackingClient {
   }
 
   /**
-   * As a delegator, generate and broadcast a transaction to terminate the delegation relationship
+   * As a delegatee, generate and broadcast a transaction to terminate the delegation relationship
    *
    * @param {string} privateKey - the private key to be used for the revoke call
    *
