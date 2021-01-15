@@ -129,7 +129,7 @@ export interface DelegateStxOptions {
  * @param  {Array<String>} stackers - the STX addresses of all delegators
  * @param  {BigNum} amountMicroStx - number of microstacks to lock
  * @param  {String} poxAddress - the reward Bitcoin address of the delegatee
- * @param  {number} startBurnBlockHeight - the burnchain block height to begin lock
+ * @param  {number} burnBlockHeight - the burnchain block height to begin lock
  * @param  {number} cycles - number of cycles to lock
  * @param  {String} privateKey - private key to sign transaction
  */
@@ -137,7 +137,7 @@ export interface DelegateStackStxOptions {
   stackers: string[];
   amountMicroStx: BN;
   poxAddress: string;
-  startBurnBlockHeight: number;
+  burnBlockHeight: number;
   cycles: number;
   privateKey: string;
 }
@@ -394,7 +394,7 @@ export class StackingClient {
     stackers,
     amountMicroStx,
     poxAddress,
-    startBurnBlockHeight,
+    burnBlockHeight,
     cycles,
     privateKey,
   }: DelegateStackStxOptions) {
@@ -409,7 +409,7 @@ export class StackingClient {
         stacker,
         amountMicroStx,
         poxAddress,
-        startBurnBlockHeight,
+        burnBlockHeight,
         cycles,
       });
       const tx = await makeContractCall({
@@ -574,14 +574,14 @@ export class StackingClient {
     stacker,
     amountMicroStx,
     poxAddress,
-    startBurnBlockHeight,
+    burnBlockHeight,
     cycles,
   }: {
     contract: string;
     stacker: string;
     amountMicroStx: BN;
     poxAddress: string;
-    startBurnBlockHeight: number;
+    burnBlockHeight: number;
     cycles: number;
   }) {
     const { hashMode, data } = decodeBtcAddress(poxAddress);
@@ -602,7 +602,7 @@ export class StackingClient {
         standardPrincipalCV(stacker),
         uintCV(amountMicroStx.toString(10)),
         address,
-        uintCV(startBurnBlockHeight),
+        uintCV(burnBlockHeight),
         uintCV(cycles),
       ],
       validateWithAbi: true,

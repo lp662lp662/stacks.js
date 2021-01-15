@@ -374,7 +374,7 @@ test('delegate stack stx with one delegator', async () => {
   const poxAddress = '1Xik14zRm29UsyS6DjhYg4iZeZqsDa8D3';
   const network = new StacksTestnet();
   const amountMicroStx = new BN(100000000000);
-  const startBurnBlockHeight = 2000;
+  const burnBlockHeight = 2000;
   const cycles = 10;
   const privateKey = 'd48f215481c16cbe6426f8e557df9b78895661971d71735126545abddcd5377001';
 
@@ -417,7 +417,7 @@ test('delegate stack stx with one delegator', async () => {
     stackers: [stacker],
     amountMicroStx,
     poxAddress,
-    startBurnBlockHeight,
+    burnBlockHeight,
     cycles,
     privateKey,
   });
@@ -438,7 +438,7 @@ test('delegate stack stx with one delegator', async () => {
       standardPrincipalCV(stacker),
       uintCV(amountMicroStx.toString(10)),
       poxAddressCV,
-      uintCV(startBurnBlockHeight),
+      uintCV(burnBlockHeight),
       uintCV(cycles),
     ],
     validateWithAbi: true,
@@ -462,7 +462,7 @@ test('delegate stack stx with three delegators', async () => {
   const poxAddress = '1Xik14zRm29UsyS6DjhYg4iZeZqsDa8D3';
   const network = new StacksTestnet();
   const amountMicroStx = new BN(100000000000);
-  const startBurnBlockHeight = 2000;
+  const burnBlockHeight = 2000;
   const cycles = 10;
   const privateKey = 'd48f215481c16cbe6426f8e557df9b78895661971d71735126545abddcd5377001';
 
@@ -505,7 +505,7 @@ test('delegate stack stx with three delegators', async () => {
     stackers,
     amountMicroStx,
     poxAddress,
-    startBurnBlockHeight,
+    burnBlockHeight,
     cycles,
     privateKey,
   });
@@ -527,7 +527,7 @@ test('delegate stack stx with three delegators', async () => {
         standardPrincipalCV(stackers[i]),
         uintCV(amountMicroStx.toString(10)),
         poxAddressCV,
-        uintCV(startBurnBlockHeight),
+        uintCV(burnBlockHeight),
         uintCV(cycles),
       ],
       validateWithAbi: true,

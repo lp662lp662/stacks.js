@@ -3,25 +3,40 @@ Library for PoX Stacking.
 
 ## Installation
 
-```
-npm install @stacks/stacking
+```shell
+npm install @stacks/stacking bn.js
 ```
 
 ## Initialization
-```typescript
-import { StacksTestnet } from '@stacks/network';
-import { StackingClient } from '@stacks/stacking';
 
-const address = 'ST3XKKN4RPV69NN1PHFDNX3TYKXT7XPC4N8KC1ARH';
+```typescript
+import { StacksTestnet, StacksMainnet } from '@stacks/network';
+import { StackingClient } from '@stacks/stacking';
+import BN from "bn.js";
+
 const network = new StacksTestnet();
-const stacker = new Stacker(address, network);
+// for mainnet: const network = new StacksMainnet();
+const client = new StackingClient(address, network);
+
+// the stacks STX address
+const address = 'ST3XKKN4RPV69NN1PHFDNX3TYKXT7XPC4N8KC1ARH';
+// a BTC address for reward payouts
+const poxAddress = "mvuYDknzDtPgGqm2GnbAbmGMLwiyW3AwFP";
+// number cycles to stack
+const cycles = 3;
+// how much to stack, in microSTX
+const amountMicroStx = new BN(100000000000);
+// private key for transaction signing
+const privateKey = 'd48f215481c16cbe6426f8e557df9b78895661971d71735126545abddcd5377001';
+// block height at which to stack
+const burnBlockHeight = 2000;
 ```
 
 ## Check stacking eligibility
+
 ```typescript  
 const stackingEligibility = await client.canStack({poxAddress, cycles});
 
-// stackingEligibility:
 // {
 //   eligible: false,
 //   reason: 'ERR_STACKING_INVALID_LOCK_PERIOD',
@@ -29,35 +44,31 @@ const stackingEligibility = await client.canStack({poxAddress, cycles});
 ```
 
 ## Stack STX
-```typescript
-const poxAddress = '1Xik14zRm29UsyS6DjhYg4iZeZqsDa8D3';
-const amountMicroStx = new BN(100000000000);
-const cycles = 10;
-const key = 'd48f215481c16cbe6426f8e557df9b78895661971d71735126545abddcd5377001';
-const burnBlockHeight = 2000;
 
+```typescript
 const stackingResults = await client.stack({ 
   amountMicroStx,
   poxAddress,
   cycles,
-  key,
+  privateKey,
   burnBlockHeight
 });
 
-// stackingResults:
 // {
 //   txid: '0xf6e9dbf6a26c1b73a14738606cb2232375d1b440246e6bbc14a45b3a66618481',
 // }
 ```
 
 ## Will Stacking be executed in the next cycle?
+
 ```typescript
 const stackingEnabledNextCycle = await client.isStackingEnabledNextCycle();
 
-// true or false
+// true / false
 ```
 
 ## How long (in seconds) is a Stacking cycle?
+
 ```typescript
 const cycleDuration = await client.getCycleDuration();
 
@@ -65,6 +76,7 @@ const cycleDuration = await client.getCycleDuration();
 ```
 
 ## How much time is left (in seconds) until the next cycle begins?
+
 ```typescript
 const secondsUntilNextCycle = await client.getSecondsUntilNextCycle();
 
@@ -72,10 +84,10 @@ const secondsUntilNextCycle = await client.getSecondsUntilNextCycle();
 ```
 
 ## Get PoX info
+
 ```typescript
 const poxInfo = await client.getPoxInfo();
 
-// poxInfo:
 // {
 //   contract_id: 'ST000000000000000000002AMW42H.pox',
 //   first_burnchain_block_height: 0,
@@ -90,10 +102,10 @@ const poxInfo = await client.getPoxInfo();
 ```
 
 ## Get Stacks node info
+
 ```typescript
 const coreInfo = await client.getCoreInfo();
 
-// coreInfo:
 // {
 //   peer_version: 385875968,
 //   pox_consensus: 'bb88a6e6e65fa7c974d3f6e91a941d05cc3dff8e',
@@ -112,6 +124,7 @@ const coreInfo = await client.getCoreInfo();
 ```
 
 ## Get account balance
+
 ```typescript
 const responseBalanceInfo = await client.getAccountBalance();
 
@@ -119,18 +132,18 @@ const responseBalanceInfo = await client.getAccountBalance();
 ```
 
 ## Does account have sufficient STX to meet minimum threshold?
+
 ```js
 const hasMinStxAmount = await client.hasMinimumStx();
 
-// true or false
+// true / false
 ```
 
-
 ## Get account stacking status
+
 ```typescript
 const stackingStatus = await client.getStatus();
 
-stackingStatus:
 // {
 //   stacked: true,
 //   details: {
@@ -143,5 +156,101 @@ stackingStatus:
 //       hashbytes: '05cf52a44bf3e6829b4f8c221cc675355bf83b7d'
 //     }
 //   }
+// }
+```
+
+## Delegation
+
+There are four methods available for delegation, two for the delegators and two for the delegatee.
+
+### Delegatee
+
+If you are the account owner / stacker / delegatee, you can delegate or revoke delegation rights.
+
+#### Delegate STX
+
+```typescript
+// STX address of the delegator 
+const delegateTo = "ST2MCYPWTFMD2MGR5YY695EJG0G1R4J2BTJPRGM7H";
+// burn height at which the delegation relationship should be revoked (optional)
+const untilBurnBlockHeight = 5000;
+
+const delegetateResponse = await client.delegateStx({
+  amountMicroStx,
+  delegateTo,
+  untilBurnBlockHeight, // optional
+  poxAddress, // optional
+  privateKey,
+});
+
+// {
+//   txid: '0xf6e9dbf6a26c1b73a14738606cb2232375d1b440246e6bbc14a45b3a66618481',
+// }
+```
+
+#### Revoke delegation
+
+```typescript
+// note that the parameter here is not JSON
+const revokeResponse = await client.revokeDelegateStx(privateKey);
+
+// {
+//   txid: '0xf6e9dbf6a26c1b73a14738606cb2232375d1b440246e6bbc14a45b3a66618481',
+// }
+```
+
+### Delegator
+
+If you are the delegator, you can stack / lock up tokens for your delegatees and commit to stacking participation for upcoming reward cycles.
+
+#### Stack delegated STX
+
+```typescript
+// delegators would initiate a different client
+const delegatorAddress = "ST22X605P0QX2BJC3NXEENXDPFCNJPHE02DTX5V74";
+// delegator private key for transaction signing
+const delegatorPrivateKey = 'd48f215481c16cbe6426f8e557df9b78895661971d71735126545abddcd5377001';
+// a BTC address for reward payouts to the delegator
+const deletagorPoxAddress = "msiYwJCvXEzjgq6hDwD9ueBka6MTfN962Z";
+
+const delegatorClient = new StackingClient(delegatorAddress, network);
+
+// STX addresses of all your delegatees / stackers
+const stackers = [address];
+
+
+// note this does not require an await
+const delegetateStackResponses = delegatorClient.delegateStackStx({
+  stackers,
+  amountMicroStx,
+  poxAddress: deletagorPoxAddress,
+  burnBlockHeight,
+  cycles,
+  privateKey: delegatorPrivateKey,
+});
+
+// [
+//   {
+//     txid: '0xf6e9dbf6a26c1b73a14738606cb2232375d1b440246e6bbc14a45b3a66618481',
+//   }
+// ]
+```
+
+#### Commit to stacking
+
+```typescript
+// burn height at which the delegation relationship should be revoked (optional)
+const untilBurnBlockHeight = 5000;
+// reward cycle id to commit to
+const rewardCycle = 12;
+
+const delegetateCommitResponse = await delegatorClient.stackAggregationCommit({
+  poxAddress: deletagorPoxAddress,
+  rewardCycle,
+  privateKey: privateKeyDelegate,
+});
+
+// {
+//   txid: '0xf6e9dbf6a26c1b73a14738606cb2232375d1b440246e6bbc14a45b3a66618481',
 // }
 ```
