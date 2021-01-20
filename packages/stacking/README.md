@@ -1,4 +1,5 @@
 # @stacks/stacking [![npm](https://img.shields.io/npm/v/@stacks/stacking?color=red)](https://www.npmjs.com/package/@stacks/stacking)
+
 Library for PoX Stacking.
 
 ## Installation
@@ -12,7 +13,7 @@ npm install @stacks/stacking bn.js
 ```typescript
 import { StacksTestnet, StacksMainnet } from '@stacks/network';
 import { StackingClient } from '@stacks/stacking';
-import BN from "bn.js";
+import BN from 'bn.js';
 
 const network = new StacksTestnet();
 // for mainnet: const network = new StacksMainnet();
@@ -21,7 +22,7 @@ const client = new StackingClient(address, network);
 // the stacks STX address
 const address = 'ST3XKKN4RPV69NN1PHFDNX3TYKXT7XPC4N8KC1ARH';
 // a BTC address for reward payouts
-const poxAddress = "mvuYDknzDtPgGqm2GnbAbmGMLwiyW3AwFP";
+const poxAddress = 'mvuYDknzDtPgGqm2GnbAbmGMLwiyW3AwFP';
 // number cycles to stack
 const cycles = 3;
 // how much to stack, in microSTX
@@ -34,8 +35,8 @@ const burnBlockHeight = 2000;
 
 ## Check stacking eligibility
 
-```typescript  
-const stackingEligibility = await client.canStack({poxAddress, cycles});
+```typescript
+const stackingEligibility = await client.canStack({ poxAddress, cycles });
 
 // {
 //   eligible: false,
@@ -46,12 +47,12 @@ const stackingEligibility = await client.canStack({poxAddress, cycles});
 ## Stack STX
 
 ```typescript
-const stackingResults = await client.stack({ 
+const stackingResults = await client.stack({
   amountMicroStx,
   poxAddress,
   cycles,
   privateKey,
-  burnBlockHeight
+  burnBlockHeight,
 });
 
 // {
@@ -128,7 +129,7 @@ const coreInfo = await client.getCoreInfo();
 ```typescript
 const responseBalanceInfo = await client.getAccountBalance();
 
-// 800000000000 
+// 800000000000
 ```
 
 ## Does account have sufficient STX to meet minimum threshold?
@@ -170,8 +171,8 @@ If you are the account owner / stacker / delegatee, you can delegate or revoke d
 #### Delegate STX
 
 ```typescript
-// STX address of the delegator 
-const delegateTo = "ST2MCYPWTFMD2MGR5YY695EJG0G1R4J2BTJPRGM7H";
+// STX address of the delegator
+const delegateTo = 'ST2MCYPWTFMD2MGR5YY695EJG0G1R4J2BTJPRGM7H';
 // burn height at which the delegation relationship should be revoked (optional)
 const untilBurnBlockHeight = 5000;
 
@@ -207,20 +208,18 @@ If you are the delegator, you can stack / lock up tokens for your delegatees and
 
 ```typescript
 // delegators would initiate a different client
-const delegatorAddress = "ST22X605P0QX2BJC3NXEENXDPFCNJPHE02DTX5V74";
+const delegatorAddress = 'ST22X605P0QX2BJC3NXEENXDPFCNJPHE02DTX5V74';
 // delegator private key for transaction signing
 const delegatorPrivateKey = 'd48f215481c16cbe6426f8e557df9b78895661971d71735126545abddcd5377001';
 // a BTC address for reward payouts to the delegator
-const deletagorPoxAddress = "msiYwJCvXEzjgq6hDwD9ueBka6MTfN962Z";
+const deletagorPoxAddress = 'msiYwJCvXEzjgq6hDwD9ueBka6MTfN962Z';
 
 const delegatorClient = new StackingClient(delegatorAddress, network);
 
 // STX addresses of all your delegatees / stackers
 const stackers = [address];
 
-
-// note this does not require an await
-const delegetateStackResponses = delegatorClient.delegateStackStx({
+const delegetateStackResponses = await delegatorClient.delegateStackStx({
   stackers,
   amountMicroStx,
   poxAddress: deletagorPoxAddress,
@@ -239,8 +238,6 @@ const delegetateStackResponses = delegatorClient.delegateStackStx({
 #### Commit to stacking
 
 ```typescript
-// burn height at which the delegation relationship should be revoked (optional)
-const untilBurnBlockHeight = 5000;
 // reward cycle id to commit to
 const rewardCycle = 12;
 
