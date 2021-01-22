@@ -149,7 +149,7 @@ export interface StackAggregationCommitOptions {
 }
 
 export class StackingClient {
-  constructor(public address: string, public network: StacksNetwork) {}
+  constructor(public address: string, public network: StacksNetwork) { }
 
   /**
    * Get stacks node info

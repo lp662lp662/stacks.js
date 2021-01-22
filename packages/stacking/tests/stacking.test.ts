@@ -10,6 +10,10 @@ import {
   someCV,
   AddressHashMode,
   noneCV,
+  responseOkCV,
+  trueCV,
+  responseErrorCV,
+  intCV,
 } from '@stacks/transactions';
 import { address as btcAddress } from 'bitcoinjs-lib';
 import { getAddressHashMode } from '../src/utils';
@@ -68,8 +72,7 @@ test('check stacking eligibility true', async () => {
   const poxAddress = '1Xik14zRm29UsyS6DjhYg4iZeZqsDa8D3';
   const network = new StacksTestnet();
 
-  // CV responseOk value = true
-  const functionCallResponse = { type: 7, value: { type: 3 } }
+  const functionCallResponse = responseOkCV(trueCV());
   const callReadOnlyFunction = jest.fn().mockResolvedValue(functionCallResponse);
 
   jest.mock('@stacks/transactions', () => ({
@@ -77,6 +80,8 @@ test('check stacking eligibility true', async () => {
     bufferCV: jest.requireActual('@stacks/transactions').bufferCV,
     tupleCV: jest.requireActual('@stacks/transactions').tupleCV,
     uintCV: jest.requireActual('@stacks/transactions').uintCV,
+    trueCV: jest.requireActual('@stacks/transactions').trueCV,
+    responseOkCV: jest.requireActual('@stacks/transactions').responseOkCV,
     ClarityType: jest.requireActual('@stacks/transactions').ClarityType,
     AddressHashMode: jest.requireActual('@stacks/transactions').AddressHashMode,
   }))
@@ -113,10 +118,8 @@ test('check stacking eligibility false bad cycles', async () => {
   const poxAddress = '1Xik14zRm29UsyS6DjhYg4iZeZqsDa8D3';
   const network = new StacksTestnet();
 
-  const errorType = new BN(2);
   const expectedErrorString = StackingErrors[StackingErrors.ERR_STACKING_INVALID_LOCK_PERIOD];
-  // CV responseError value = CV uint 2
-  const functionCallResponse = { type: 8, value: { type: 0, value: errorType } }
+  const functionCallResponse = responseErrorCV(intCV(2));
   const callReadOnlyFunction = jest.fn().mockResolvedValue(functionCallResponse);
 
   jest.mock('@stacks/transactions', () => ({
@@ -124,6 +127,8 @@ test('check stacking eligibility false bad cycles', async () => {
     bufferCV: jest.requireActual('@stacks/transactions').bufferCV,
     tupleCV: jest.requireActual('@stacks/transactions').tupleCV,
     uintCV: jest.requireActual('@stacks/transactions').uintCV,
+    intCV: jest.requireActual('@stacks/transactions').intCV,
+    responseErrorCV: jest.requireActual('@stacks/transactions').responseErrorCV,
     ClarityType: jest.requireActual('@stacks/transactions').ClarityType,
     cvToString: jest.requireActual('@stacks/transactions').cvToString,
     AddressHashMode: jest.requireActual('@stacks/transactions').AddressHashMode,
